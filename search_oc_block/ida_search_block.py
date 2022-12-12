@@ -27,15 +27,19 @@ print("Start analyze binary for " + ("Mac" if IS_MAC else "iOS"))
 def isInText(x):
     return get_segm_name(x) == '__text'
 
-
-GlobalBlockAddr = get_name_ea_simple("__NSConcreteGlobalBlock")
+__NSConcreteGlobalBlock_ptr = get_name_ea_simple('__NSConcreteGlobalBlock_ptr')
+__NSConcreteGlobalBlock = get_name_ea_simple("__NSConcreteGlobalBlock")
 
 class GlobalBlockInfo:
     pass
 
 AllGlobalBlockMap = {}
-for struct in list(DataRefsTo(GlobalBlockAddr)):
+for struct in list(DataRefsTo(__NSConcreteGlobalBlock)):
     func = 0
+
+    if struct == __NSConcreteGlobalBlock_ptr:
+        continue
+
     FUNC_OFFSET_IN_BLOCK = 12 if IS32BIT else 16
     if IS32BIT:
         func = get_dword(struct + FUNC_OFFSET_IN_BLOCK)
@@ -115,7 +119,7 @@ resultDict = {}
 blockNameRefCountDict = {}
 
 def findBlockName(block_func):
-    print("find block name  %X" % block_func)
+    # print("find block name  %X" % block_func)
     funcName = get_func_name(block_func)
 
     if len(funcName) != 0 and funcName[0] in ('-', '+'):
@@ -183,6 +187,11 @@ allPossibleStackBlockFunc = list(set (allPossibleStackBlockFunc))
 
 allPossibleStackBlockFunc = list(filter(lambda x:isPossibleStackBlockForFunc(x) , allPossibleStackBlockFunc ))
 
+# get all functions symbol of ida
+for func in idautils.Functions():
+    funcName = get_func_name(func)
+    if len(funcName) != 0: # and funcName[0] in ('-', '+'):
+        resultDict[func] = funcName
 
 #process all Global Block 
 for block_func in AllGlobalBlockMap:
